@@ -96,5 +96,5 @@ if __name__ == "__main__":
      print("\nOracle stopped")
      print(
        f"saved {len(oracle.history)} samples "
-       f"to price_history.json"
+       f"to price_history_vm1.json"
      )

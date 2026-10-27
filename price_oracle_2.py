@@ -59,7 +59,7 @@ class PriceOracle:
    self.history.append(sample)
    return sample
 
-  def save_history(self, filename="price_history.json"):
+  def save_history(self, filename="price_history_vm2.json"):
    directory = os.path.dirname(filename)
    if directory: 
      os.makedirs(directory, exist_ok=True)

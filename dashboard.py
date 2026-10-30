@@ -185,6 +185,75 @@ st.markdown(
 st.divider()
 
 
+# ── LIVE CLOUD SPOT PRICES ───────────────────────────────
+
+st.subheader("Live Cloud Spot Prices")
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.metric(
+        "AWS",
+        f"${prices['AWS']}/hr",
+        "BEST" if best == "AWS" else ""
+    )
+    st.progress(min(prices["AWS"] / 0.30, 1.0))
+
+with c2:
+    st.metric(
+        "GCP",
+        f"${prices['GCP']}/hr",
+        "BEST" if best == "GCP" else ""
+    )
+    st.progress(min(prices["GCP"] / 0.30, 1.0))
+
+with c3:
+    st.metric(
+        "Azure",
+        f"${prices['Azure']}/hr",
+        "BEST" if best == "Azure" else ""
+    )
+    st.progress(min(prices["Azure"] / 0.30, 1.0))
+
+st.success(
+    f"Cheapest Cloud: {best} — ${prices[best]}/hr"
+)
+
+st.divider()
+
+
+# ── LIVE SYSTEM METRICS ───────────────────────────────────
+
+st.subheader("Real System Metrics (psutil)")
+
+m1, m2, m3, m4 = st.columns(4)
+
+with m1:
+    st.metric(
+        "CPU",
+        f"{cpu:.1f}%",
+        "HIGH" if cpu > 80 else "OK"
+    )
+
+with m2:
+    st.metric(
+        "RAM",
+        f"{ram:.1f}%",
+        "HIGH" if ram > 75 else "OK"
+    )
+
+with m3:
+    st.metric("Network Received", f"{net} MB")
+
+with m4:
+    st.metric("Disk", f"{disk:.1f}%")
+
+st.progress(cpu / 100, text=f"CPU: {cpu:.1f}%")
+st.progress(ram / 100, text=f"RAM: {ram:.1f}%")
+
+st.divider()
+
+
 # ── CONTAINER PRICES ──────────────────────────────────────
 
 st.subheader("Container Price Comparison")
@@ -342,75 +411,6 @@ if st.button("Run Local Migration", type="primary"):
         st.success("Migration completed successfully.")
     else:
         st.error("Migration failed.")
-
-st.divider()
-
-
-# ── LIVE CLOUD SPOT PRICES ───────────────────────────────
-
-st.subheader("Live Cloud Spot Prices")
-
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.metric(
-        "AWS",
-        f"${prices['AWS']}/hr",
-        "BEST" if best == "AWS" else ""
-    )
-    st.progress(min(prices["AWS"] / 0.30, 1.0))
-
-with c2:
-    st.metric(
-        "GCP",
-        f"${prices['GCP']}/hr",
-        "BEST" if best == "GCP" else ""
-    )
-    st.progress(min(prices["GCP"] / 0.30, 1.0))
-
-with c3:
-    st.metric(
-        "Azure",
-        f"${prices['Azure']}/hr",
-        "BEST" if best == "Azure" else ""
-    )
-    st.progress(min(prices["Azure"] / 0.30, 1.0))
-
-st.success(
-    f"Cheapest Cloud: {best} — ${prices[best]}/hr"
-)
-
-st.divider()
-
-
-# ── LIVE SYSTEM METRICS ───────────────────────────────────
-
-st.subheader("Real System Metrics (psutil)")
-
-m1, m2, m3, m4 = st.columns(4)
-
-with m1:
-    st.metric(
-        "CPU",
-        f"{cpu:.1f}%",
-        "HIGH" if cpu > 80 else "OK"
-    )
-
-with m2:
-    st.metric(
-        "RAM",
-        f"{ram:.1f}%",
-        "HIGH" if ram > 75 else "OK"
-    )
-
-with m3:
-    st.metric("Network Received", f"{net} MB")
-
-with m4:
-    st.metric("Disk", f"{disk:.1f}%")
-
-st.progress(cpu / 100, text=f"CPU: {cpu:.1f}%")
-st.progress(ram / 100, text=f"RAM: {ram:.1f}%")
 
 st.divider()
 

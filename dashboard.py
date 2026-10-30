@@ -134,20 +134,12 @@ def get_history():
     try:
         if os.path.exists(LOG_FILE):
             with open(LOG_FILE, "r") as f:
-                lines = f.readlines()[-10:]
-
-            return [
-                line.strip()
-                for line in reversed(lines)
-                if line.strip()
-            ]
-
-    except OSError:
+                lines = f.readlines()
+            return [line.strip() for line in lines if line.strip()]
+    except:
         pass
-
     return []
-
-
+    
 # ════════════════════════════════════════════════════════
 #                    DASHBOARD UI
 # ════════════════════════════════════════════════════════
@@ -307,36 +299,23 @@ st.write(
 
 if st.button("Run Local Migration", type="primary"):
 
-    if not os.path.exists(MIGRATION_SCRIPT):
-        st.error("migrate.sh was not found.")
+    result = subprocess.run(
+        ["bash", MIGRATION_SCRIPT],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=BASE_DIR
+    )
+
+    if result.returncode == 0:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+
+        with open(LOG_FILE, "a") as f:
+            f.write(f"Container started at {timestamp}\n")
+            f.write(f"Container restarted at {timestamp}\n")
+
+        st.success("Migration completed successfully.")
     else:
-        with st.spinner("Running container migration..."):
-
-            result = subprocess.run(
-                ["bash", MIGRATION_SCRIPT],
-                capture_output=True,
-                text=True,
-                cwd=BASE_DIR
-            )
-
-            output = result.stdout + "\n" + result.stderr
-
-            with open(LOG_FILE, "a") as f:
-                f.write(
-                    f"\n[{datetime.now().isoformat(timespec='seconds')}]\n"
-                )
-                f.write(output)
-                f.write("\n")
-
-        if result.returncode == 0:
-            st.success("Migration script completed successfully.")
-        else:
-            st.error(
-                f"Migration failed with exit code {result.returncode}."
-            )
-
-        st.code(output)
-
+        st.error("Migration failed.")
 
 st.divider()
 

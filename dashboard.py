@@ -1,3 +1,4 @@
+
 import streamlit as st
 import json
 import random
@@ -45,6 +46,7 @@ VM1_HISTORY = os.path.join(BASE_DIR, "price_history_vm1.json")
 VM2_HISTORY = os.path.join(BASE_DIR, "price_history_vm2.json")
 MIGRATION_SCRIPT = os.path.join(BASE_DIR, "migrate.sh")
 LOG_FILE = os.path.join(BASE_DIR, "migration_log.txt")
+MIGRATION_METRICS_FILE = os.path.join(BASE_DIR, "migration_metrics.json")
 
 # Local container mapping
 CONTAINER_1 = "counter-src"
@@ -393,6 +395,8 @@ st.write(
 
 if st.button("Run Local Migration", type="primary"):
 
+    migration_start = time.perf_counter()
+
     result = subprocess.run(
         ["bash", MIGRATION_SCRIPT],
         stdout=subprocess.DEVNULL,
@@ -400,14 +404,36 @@ if st.button("Run Local Migration", type="primary"):
         cwd=BASE_DIR
     )
 
+    migration_duration = time.perf_counter() - migration_start
+
     if result.returncode == 0:
         timestamp = datetime.now().strftime("%H:%M:%S")
 
         with open(LOG_FILE, "a") as f:
-            f.write(f"Container started at {timestamp}\n")
-            f.write(f"Container restarted at {timestamp}\n")
+            f.write(f"Container started at {timestamp}\\n")
+            f.write(f"Container restarted at {timestamp}\\n")
+
+        # Save the measured duration of each successful migration.
+        migration_records = []
+        if os.path.exists(MIGRATION_METRICS_FILE):
+            try:
+                with open(MIGRATION_METRICS_FILE, "r") as f:
+                    migration_records = json.load(f)
+                if not isinstance(migration_records, list):
+                    migration_records = []
+            except (OSError, json.JSONDecodeError):
+                migration_records = []
+
+        migration_records.append({
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "duration_seconds": round(migration_duration, 3)
+        })
+
+        with open(MIGRATION_METRICS_FILE, "w") as f:
+            json.dump(migration_records, f, indent=4)
 
         st.success("Migration completed successfully.")
+        st.metric("Measured Migration Duration", f"{migration_duration:.2f} seconds")
     else:
         st.error("Migration failed.")
 
@@ -427,7 +453,83 @@ else:
     st.info("No migrations recorded yet.")
 
 
+# ── MIGRATION COST-EFFECTIVENESS ──────────────────────────
+
 st.divider()
+st.subheader("Migration Cost-Effectiveness Analysis")
+
+st.caption(
+    "Uses the latest container price-history values and the measured duration "
+    "of the most recent successful migration. Prices are treated as hourly rates."
+)
+
+latest_migration_duration = None
+
+try:
+    if os.path.exists(MIGRATION_METRICS_FILE):
+        with open(MIGRATION_METRICS_FILE, "r") as f:
+            migration_records = json.load(f)
+
+        if migration_records:
+            latest_migration_duration = float(
+                migration_records[-1]["duration_seconds"]
+            )
+except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+    latest_migration_duration = None
+
+if price1 is None or price2 is None:
+    st.warning("Cost analysis unavailable: waiting for both container price histories.")
+elif latest_migration_duration is None:
+    st.info("Run a successful migration to record its duration and calculate migration overhead.")
+else:
+    expected_hours = st.number_input(
+        "Expected operating period after migration (hours)",
+        min_value=0.1,
+        value=24.0,
+        step=1.0,
+        key="cost_analysis_expected_hours"
+    )
+
+    # Estimated source cost for the same operating period without migration.
+    cost_before = float(price1) * expected_hours
+
+    # Estimate migration overhead using source hourly price during migration.
+    migration_overhead = (
+        float(price1) * latest_migration_duration / 3600.0
+    )
+    cost_after = (
+        float(price2) * expected_hours + migration_overhead
+    )
+    net_savings = cost_before - cost_after
+
+    cost_col1, cost_col2, cost_col3 = st.columns(3)
+
+    cost_col1.metric("Cost Without Migration", f"${cost_before:.4f}")
+    cost_col2.metric("Cost With Migration", f"${cost_after:.4f}")
+    cost_col3.metric("Estimated Net Savings", f"${net_savings:.4f}")
+
+    st.write(
+        f"Measured migration duration: **{latest_migration_duration:.2f} seconds**"
+    )
+    st.write(
+        f"Estimated migration overhead: **${migration_overhead:.6f}**"
+    )
+
+    if net_savings > 0:
+        st.success("Migration is estimated to be cost-effective for this operating period.")
+    elif net_savings < 0:
+        st.warning("Migration is not estimated to be cost-effective for this operating period.")
+    else:
+        st.info("Estimated costs are equal for this operating period.")
+
+    st.caption(
+        "Assumption: source hourly price is used as a proxy for migration-time cost. "
+        "This is an estimate, not measured cloud billing or actual local infrastructure cost."
+    )
+
+
+st.divider()
+
 
 st.caption(
     f"Updated: {datetime.now().strftime('%H:%M:%S')} "
